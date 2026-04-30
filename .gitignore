@@ -1,0 +1,23 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+
+# 대회 자산 — 외부 유출 금지
+scenarios/*/artifacts/
+scenarios/*/attempts.jsonl
+
+# 비밀
+.env
+*.key
+secrets/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
