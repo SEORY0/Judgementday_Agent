@@ -19,10 +19,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import sys
 import time
 from pathlib import Path
+
+from tooling.common import load_manifest, sha256_file
 
 ROOT = Path(__file__).resolve().parent.parent
 SCENARIOS = ROOT / "scenarios"
@@ -34,25 +35,53 @@ def attempt_id(scenario: str, payload: str) -> str:
 
 
 def log(args: argparse.Namespace) -> int:
-    scen_dir = SCENARIOS / args.scenario
+    manifest = {}
+    if args.manifest:
+        manifest = load_manifest(args.manifest)
+    scenario = args.scenario or manifest.get("scenario")
+    if not scenario:
+        print("scenario required unless manifest contains scenario", file=sys.stderr)
+        return 2
+    scen_dir = SCENARIOS / scenario
     if not scen_dir.is_dir():
-        print(f"unknown scenario: {args.scenario}", file=sys.stderr)
+        print(f"unknown scenario: {scenario}", file=sys.stderr)
+        return 2
+    channel = args.channel or manifest.get("channel", "")
+    family = args.family or manifest.get("family", "")
+    if not channel or not family:
+        print("channel and family required unless manifest contains them", file=sys.stderr)
         return 2
     payload = args.payload_text or ""
     if args.artifact and Path(args.artifact).exists():
         payload += "::" + str(Path(args.artifact).resolve())
-    aid = attempt_id(args.scenario, payload or args.note or "")
+    aid = attempt_id(scenario, payload or args.note or "")
+    artifact_sha256 = args.artifact_sha256
+    if not artifact_sha256 and args.artifact and Path(args.artifact).exists():
+        artifact_sha256 = sha256_file(args.artifact)
     record = {
         "id": aid,
         "ts": int(time.time()),
-        "scenario": args.scenario,
+        "scenario": scenario,
         "model": args.model,
-        "channel": args.channel,
-        "family": args.family,
+        "channel": channel,
+        "bounty": args.bounty if args.bounty is not None else manifest.get("bounty"),
+        "target_action": args.target_action or manifest.get("target_action", ""),
+        "family": family,
+        "family_id": (manifest.get("extra") or {}).get("family_id", ""),
+        "cluster_id": (manifest.get("extra") or {}).get("cluster_id", ""),
+        "variant_id": args.variant_id or manifest.get("variant_id", ""),
         "artifact": args.artifact,
+        "artifact_sha256": artifact_sha256 or manifest.get("artifact_sha256", ""),
+        "description": args.description or manifest.get("description", ""),
+        "method": args.method or manifest.get("method", ""),
+        "method_detail": args.method_detail or manifest.get("method_detail", ""),
+        "visible_text": manifest.get("visible_text", ""),
+        "payload_text": args.payload_text or manifest.get("payload_text", ""),
         "result": args.result,
         "score": args.score,
         "note": args.note,
+        "review_note": args.review_note,
+        "site_submission_id": args.site_submission_id,
     }
     log_path = scen_dir / "attempts.jsonl"
     with log_path.open("a", encoding="utf-8") as f:
@@ -96,7 +125,7 @@ def stats(_: argparse.Namespace) -> int:
         log_path = scen_dir / "attempts.jsonl"
         if not log_path.exists():
             continue
-        c = {"total": 0, "breach": 0, "denied": 0, "pending": 0}
+        c = {"total": 0, "breach": 0, "denied": 0, "rejected": 0, "pending": 0, "submitted": 0, "approved": 0}
         for line in log_path.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
@@ -116,20 +145,30 @@ def main() -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     pl = sub.add_parser("log")
-    pl.add_argument("--scenario", required=True)
-    pl.add_argument("--model", required=True)
-    pl.add_argument("--channel", required=True)
-    pl.add_argument("--family", required=True)
+    pl.add_argument("--scenario")
+    pl.add_argument("--model", default="all")
+    pl.add_argument("--channel")
+    pl.add_argument("--family")
     pl.add_argument("--artifact")
+    pl.add_argument("--manifest")
     pl.add_argument("--payload-text")
+    pl.add_argument("--bounty", type=int)
+    pl.add_argument("--target-action", default="")
+    pl.add_argument("--variant-id", default="")
+    pl.add_argument("--artifact-sha256", default="")
+    pl.add_argument("--description", default="")
+    pl.add_argument("--method", default="")
+    pl.add_argument("--method-detail", default="")
     pl.add_argument("--result", default="pending")
     pl.add_argument("--score", type=float)
     pl.add_argument("--note", default="")
+    pl.add_argument("--review-note", default="")
+    pl.add_argument("--site-submission-id", default="")
     pl.set_defaults(func=log)
 
     pr = sub.add_parser("resolve")
     pr.add_argument("--id", required=True)
-    pr.add_argument("--result", required=True, choices=["breach", "denied", "rejected", "pending"])
+    pr.add_argument("--result", required=True, choices=["breach", "denied", "rejected", "pending", "submitted", "approved"])
     pr.add_argument("--score", type=float)
     pr.add_argument("--note")
     pr.set_defaults(func=resolve)

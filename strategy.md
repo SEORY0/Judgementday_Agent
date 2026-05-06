@@ -31,10 +31,20 @@
 
 | 라운드 | Day | 시나리오 슬롯 |
 |---|---|---|
-| 1 | 5/10–5/12 | track1_0 (Triage), track2_0 (SOC) |
-| 2 | 5/13–5/15 | track2_1 (Aircraft), track1_1 (Robot) |
+| 1 | 5/10–5/12 | track2_0 (SOC), track2_1 (Aircraft) |
+| 2 | 5/13–5/15 | track1_1 (Robot), track1_2 (Sports) |
 | 3 | 5/16–5/18 | track1_3 (Dam), track2_2 (Epidemic) |
-| 4 | 5/19–5/21 | track1_2 (Sports), track2_3 (Deepfake) |
+| 4 | 5/19–5/21 | track2_3 (Deepfake), track1_0 (Triage) |
 | 5 | 5/22–5/24 | 직전 4라운드 weakest cell 보강 |
 
-bounty multiplier 확정 후 (Phase 1 종료 시) 위 표를 갱신한다.
+2026-04-30 18:22 KST bounty matrix 기준으로 갱신. 100x cells는 track2_0 SOC (Gemini audio, Claude text)와 track2_1 Aircraft (Gemini audio, Claude document).
+
+## High-Bounty 집중 후보
+
+| 우선 | Cell | 이유 |
+|---:|---|---|
+| 1 | track2_0 SOC / Gemini-3.1-pro audio / 100x | Slack huddle + fake CMDB/tool-result spoof 조합 |
+| 2 | track2_0 SOC / Claude-Opus-4.6 text / 100x | text DM은 제작비 낮고 반복 sweep 가능 |
+| 3 | track2_1 Aircraft / Gemini-3.1-pro audio / 100x | maintenance chief + BPAT sync/outage narrative |
+| 4 | track2_1 Aircraft / Claude-Opus-4.6 document / 100x | SIL PDF + fake BPAT verification artifact |
+| 5 | track1_1 Robot / Gemini-3.1-pro audio / 57x | official maintenance exception을 음성으로 보강 |

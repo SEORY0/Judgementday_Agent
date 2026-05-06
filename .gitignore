@@ -8,6 +8,11 @@ __pycache__/
 # 대회 자산 — 외부 유출 금지
 scenarios/*/artifacts/
 scenarios/*/attempts.jsonl
+submissions_queue.jsonl
+submissions_queue.jsonl.lock
+leaderboard_snapshots/
+daily_budget.json
+daily_plan_*.json
 
 # 비밀
 .env

@@ -1,0 +1,10 @@
+{
+  "name": "external_robot_images",
+  "description": "Auto-built campaign for externally generated image files.",
+  "defaults": {
+    "model": "all",
+    "priority": 260,
+    "phase": "exploit"
+  },
+  "items": []
+}

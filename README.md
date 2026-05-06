@@ -17,7 +17,54 @@
 - [scenarios/](scenarios/) — 8개 시나리오 brief, invariants, attack ideas, attempts log, artifacts
 - [playbook/](playbook/) — 공격 패턴 카탈로그, 모달리티 레시피, writeup 템플릿
 - [tooling/](tooling/) — PDF/audio/image/video 생성기, 제출 트래커, dedupe
+- [campaigns/](campaigns/) — queue 기반 제출 캠페인 정의
 - [notes/](notes/) — daily_log, observations
+
+## 운영 파이프라인
+
+첫 wave는 `campaign_runner`로 관리한다. 기본 경로는 Submit을 누르지 않고, 브라우저 폼을 채운 뒤 사람 확인 단계에서 멈춘다. 큐를 쓰는 명령(`generate`, `dedupe`, `fill`, `submit`, `mark-submitted`, `sync-results`)은 내부 lock을 잡지만, 운영상 한 터미널에서 순차 실행한다.
+
+```
+.venv/bin/python -m tooling.campaign_runner plan
+.venv/bin/python -m tooling.campaign_runner generate --limit 30
+.venv/bin/python -m tooling.campaign_runner dedupe --limit 30
+.venv/bin/python -m tooling.campaign_runner budget --daily-limit 100 --reserve 10
+.venv/bin/python -m tooling.campaign_runner daily-plan
+.venv/bin/python -m tooling.campaign_runner families
+.venv/bin/python -m tooling.campaign_runner score
+.venv/bin/python -m tooling.campaign_runner fill --queue-id <queue_id>
+```
+
+수동 Submit 후에는 해당 queue item을 attempts log에 연결한다.
+
+```
+.venv/bin/python -m tooling.campaign_runner mark-submitted --queue-id <queue_id>
+```
+
+자동 Submit은 명시 플래그 없이는 동작하지 않는다.
+
+```
+.venv/bin/python -m tooling.campaign_runner submit \
+  --batch-id robot_image_new_families \
+  --batch-size 3 \
+  --daily-limit 100 \
+  --reserve 10 \
+  --submit \
+  --confirm-batch robot_image_new_families
+```
+
+GPT 이미지 생성 직후 연속 제출은 batch submit 대신 단건 명령을 사용한다. `image_gen`으로 이미지 1개를 만든 뒤, 그 파일을 `--source-image`로 넘기면 inbox 복사, 단건 campaign/queue 생성, dedupe, dry-run, live submit까지 한 번에 수행한다. 결과는 기다리지 않고 `pending`으로 기록한 뒤 다음 이미지를 만들면 된다.
+
+```
+.venv/bin/python -m tooling.campaign_runner generate-and-submit-one \
+  --source-image /path/to/generated.png \
+  --family-id sports_integrity_terminal \
+  --batch-id immediate_sports_integrity_terminal_001 \
+  --submit \
+  --confirm-batch immediate_sports_integrity_terminal_001
+```
+
+현재 정책은 같은 family 하루 최대 5회, 같은 cluster 하루 최대 2회, KST 기준 100회 중 10회 reserve를 기본값으로 둔다. `SAFE`가 3회 누적된 surface와 `SIMILAR_TO_EXISTING`이 나온 cluster는 자동 제출 후보에서 빠진다.
 
 ## 8개 시나리오
 
